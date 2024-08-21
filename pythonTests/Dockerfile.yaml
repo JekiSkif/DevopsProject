@@ -1,0 +1,11 @@
+# Base image for Python 3.10
+FROM python:3.10-slim
+
+# Set the working directory
+WORKDIR /tester
+
+# Copy the test script into the container
+COPY test_api.py /tester/test_api.py
+
+# Run the test script
+CMD ["python", "test_api.py"]
