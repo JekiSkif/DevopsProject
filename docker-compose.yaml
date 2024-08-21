@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # Service for the Spring Boot application
+  cd-server:
+    # Use the OpenJDK 17 image for running the Spring Boot application
+    image: openjdk:17-jdk-slim
+    container_name: cd-server
+    # Map port 8080 on the host to port 8080 in the container
+    ports:
+      - "8080:8080"
+    # Specify the network for the container
+    networks:
+      - app-network
+    # Define a volume for persistent data storage
+    volumes:
+      - cd-server-data:/app/data
+    # Set environment variables for the container
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    # Command to run the Spring Boot application
+    command: ["java", "-jar", "/app/spring-boot-docker.jar"]
+    # Ensure the cd-server service starts only after db and redis services are up
+    depends_on:
+      - db
+      - redis
+
+  # Service for Redis cache
+  redis:
+    # Use the Redis image with Alpine Linux for a lightweight cache
+    image: redis:alpine
+    container_name: redis-cache
+    # Map port 6379 on the host to port 6379 in the container
+    ports:
+      - "6379:6379"
+    # Specify the network for the container
+    networks:
+      - app-network
+    # Define a volume for persistent data storage
+    volumes:
+      - redis-data:/data
+
+  # Service for PostgreSQL database
+  db:
+    # Use the PostgreSQL 13 image
+    image: postgres:13
+    container_name: postgres-db
+    # Set environment variables for PostgreSQL credentials and database name
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: testdb
+    # Map port 5432 on the host to port 5432 in the container
+    ports:
+      - "5432:5432"
+    # Specify the network for the container
+    networks:
+      - app-network
+    # Define a volume for persistent data storage
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  # Service for running API tests
+  tester:
+    # Build the tester service from the Dockerfile in the ./tester directory
+    build:
+      context: ./tester
+      dockerfile: Dockerfile
+    # Use the built image tagged as api-tester:latest
+    image: api-tester:latest
+    container_name: api-tester
+    # Specify the network for the container
+    networks:
+      - app-network
+    # Ensure the tester service starts only after cd-server is up
+    depends_on:
+      - cd-server
+
+# Define a custom network for communication between services
+networks:
+  app-network:
+
+# Define named volumes for persistent data storage
+volumes:
+  cd-server-data:
+  redis-data:
+  db-data:
